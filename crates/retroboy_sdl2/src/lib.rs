@@ -16,6 +16,11 @@ pub trait App {
     fn handle_events(&mut self, event_pump: &mut sdl2::EventPump);
     fn should_exit(&self) -> bool;
     fn exit(&mut self);
+
+    fn width(&self) -> u32;
+    fn height(&self) -> u32;
+    fn scale(&self) -> u32;
+    fn title(&self) -> String;
 }
 
 #[derive(TypedBuilder)]
@@ -53,7 +58,7 @@ impl SdlContext {
             .window(&title, width * scale, height * scale)
             .position_centered()
             .build()?;
-        let mut canvas = window.into_canvas().build()?;
+        let mut canvas = window.into_canvas().present_vsync().build()?;
         canvas.set_scale(scale as f32, scale as f32).unwrap();
         let creator = canvas.texture_creator();
         // or use unsafe_texture feature if not aware of lifetime

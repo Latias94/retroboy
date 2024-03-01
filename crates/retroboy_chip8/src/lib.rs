@@ -1,57 +1,35 @@
-mod cpu;
+pub mod app;
+pub mod emulator;
 
-use retroboy_sdl2::sdl2::event::Event;
-use retroboy_sdl2::sdl2::keyboard::Keycode;
-use retroboy_sdl2::{sdl2, App};
+pub use app::EmulatorApp;
 
-pub struct Chip8 {
-    should_exit: bool,
-}
+pub const SCREEN_WIDTH: usize = 64;
+pub const SCREEN_HEIGHT: usize = 32;
+pub const SCREEN_SCALE: u32 = 15;
+const RAM_SIZE: usize = 4096;
+const NUM_REGS: usize = 16;
 
-impl Chip8 {
-    pub fn new() -> Self {
-        Chip8 { should_exit: false }
-    }
-}
+const STACK_SIZE: usize = 16;
+const NUM_KEYS: usize = 16;
 
-impl App for Chip8 {
-    fn init(&mut self) {
-        log::info!("Chip8 init");
-    }
-    fn update(&mut self, screen_state: &mut [u8]) {}
-    fn handle_events(&mut self, event_pump: &mut sdl2::EventPump) {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => self.should_exit = true,
-                Event::KeyDown {
-                    keycode: Some(Keycode::W),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::S),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => {}
-                _ => { /* do nothing */ }
-            }
-        }
-    }
-    fn should_exit(&self) -> bool {
-        self.should_exit
-    }
+const START_ADDRESS: u16 = 0x200;
 
-    fn exit(&mut self) {
-        log::info!("Chip8 exit");
-    }
-}
+const FONTSET_SIZE: usize = 80;
+const FONTSET: [u8; FONTSET_SIZE] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
