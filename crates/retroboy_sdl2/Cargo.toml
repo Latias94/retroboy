@@ -1,0 +1,11 @@
+[package]
+name = "retroboy_sdl2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
+sdl2 = { workspace = true, features = ["bundled"] }
+typed-builder.workspace = true
