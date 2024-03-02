@@ -1,7 +1,12 @@
 [package]
 name = "retroboy_chip8"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+readme = "README.md"
+description = "RetroBoy Chip-8 emulator"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

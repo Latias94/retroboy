@@ -1,7 +1,12 @@
 [package]
 name = "retroboy"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+description = "A set of retro emulators written in Rust"
 
 [dependencies]
 retroboy_sdl2.workspace = true
