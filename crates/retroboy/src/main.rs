@@ -23,6 +23,6 @@ fn main() {
 
 // root/assets/roms/chip8/games/Airplane.ch8
 fn load_rom() -> io::Result<Vec<u8>> {
-    let path = "assets/roms/chip8/games/Cave.ch8";
+    let path = "assets/roms/chip8/games/Pong [Paul Vervalin, 1990].ch8";
     std::fs::read(path)
 }

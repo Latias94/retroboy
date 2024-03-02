@@ -1,9 +1,8 @@
 use crate::emulator::Emulator;
-use crate::{SCREEN_HEIGHT, SCREEN_SCALE, SCREEN_WIDTH};
-use retroboy_common::Color;
-use retroboy_sdl2::sdl2::event::Event;
-use retroboy_sdl2::sdl2::keyboard::Keycode;
-use retroboy_sdl2::{sdl2, App};
+use crate::{SCREEN_HEIGHT, SCREEN_SCALE, SCREEN_WIDTH, TICKS_PER_FRAME};
+use retroboy_common::color::Color;
+use retroboy_common::key::Key;
+use retroboy_sdl2::App;
 
 #[derive(Default)]
 pub struct EmulatorApp {
@@ -17,6 +16,11 @@ impl App for EmulatorApp {
     }
 
     fn update(&mut self, screen_state: &mut [u8]) {
+        for _ in 0..TICKS_PER_FRAME {
+            self.emulator.tick();
+        }
+        self.emulator.tick_timers();
+
         let display = self.emulator.get_display();
 
         for (i, pixel) in display.iter().enumerate() {
@@ -28,35 +32,11 @@ impl App for EmulatorApp {
             screen_state[index + 1] = color.g;
             screen_state[index + 2] = color.b;
         }
-        self.emulator.tick();
     }
 
-    fn handle_events(&mut self, event_pump: &mut sdl2::EventPump) {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => self.should_exit = true,
-                Event::KeyDown {
-                    keycode: Some(Keycode::W),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::S),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {}
-                Event::KeyDown {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => {}
-                _ => { /* do nothing */ }
-            }
+    fn handle_key_event(&mut self, key: Key, is_pressed: bool) {
+        if let Some(idx) = crate::key2idx(key) {
+            self.emulator.set_key(idx, is_pressed);
         }
     }
 

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 retroboy_sdl2.workspace = true
 retroboy_common.workspace = true
+
 anyhow.workspace = true
 log.workspace = true
 env_logger.workspace = true

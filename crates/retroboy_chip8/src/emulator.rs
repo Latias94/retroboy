@@ -98,7 +98,7 @@ impl Emulator {
         let digit4 = op & 0x000F;
         match (digit1, digit2, digit3, digit4) {
             // NOP
-            (0, 0, 0, 0) => return,
+            (0, 0, 0, 0) => (),
             // 00E0 - CLS Clear the display
             (0, 0, 0xE, 0) => self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT],
             // 00EE - RET Return from subroutine

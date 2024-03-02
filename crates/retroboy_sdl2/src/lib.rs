@@ -3,7 +3,9 @@ use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::WindowCanvas;
 use typed_builder::TypedBuilder;
 
+use retroboy_common::key::Key;
 pub use sdl2;
+use sdl2::event::Event;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PixelFormat {
@@ -13,7 +15,7 @@ pub enum PixelFormat {
 pub trait App {
     fn init(&mut self);
     fn update(&mut self, screen: &mut [u8]);
-    fn handle_events(&mut self, event_pump: &mut sdl2::EventPump);
+    fn handle_key_event(&mut self, key: Key, is_down: bool);
     fn should_exit(&self) -> bool;
     fn exit(&mut self);
 
@@ -75,8 +77,32 @@ impl SdlContext {
                 break;
             }
             let mut event_pump = sdl_context.event_pump().unwrap();
+
+            while let Some(event) = event_pump.poll_event() {
+                match event {
+                    Event::Quit { .. } => {
+                        app.exit();
+                        return Ok(());
+                    }
+                    Event::KeyDown {
+                        keycode: Some(keycode),
+                        ..
+                    } => {
+                        let key = map_keycode(keycode);
+                        app.handle_key_event(key, true);
+                    }
+                    Event::KeyUp {
+                        keycode: Some(keycode),
+                        ..
+                    } => {
+                        let key = map_keycode(keycode);
+                        app.handle_key_event(key, false);
+                    }
+                    _ => {}
+                }
+            }
+
             app.update(&mut screen_state);
-            app.handle_events(&mut event_pump);
 
             texture
                 .update(None, &screen_state, (width * color_size) as usize)
@@ -98,5 +124,27 @@ pub fn map_pixel_format(pixel_format: PixelFormat) -> PixelFormatEnum {
 pub fn map_pixel_format_size(pixel_format: PixelFormat) -> u32 {
     match pixel_format {
         PixelFormat::RGB24 => 3,
+    }
+}
+
+pub fn map_keycode(keycode: sdl2::keyboard::Keycode) -> Key {
+    match keycode {
+        sdl2::keyboard::Keycode::Num1 => Key::Num1,
+        sdl2::keyboard::Keycode::Num2 => Key::Num2,
+        sdl2::keyboard::Keycode::Num3 => Key::Num3,
+        sdl2::keyboard::Keycode::Num4 => Key::Num4,
+        sdl2::keyboard::Keycode::Q => Key::Q,
+        sdl2::keyboard::Keycode::W => Key::W,
+        sdl2::keyboard::Keycode::E => Key::E,
+        sdl2::keyboard::Keycode::R => Key::R,
+        sdl2::keyboard::Keycode::A => Key::A,
+        sdl2::keyboard::Keycode::S => Key::S,
+        sdl2::keyboard::Keycode::D => Key::D,
+        sdl2::keyboard::Keycode::F => Key::F,
+        sdl2::keyboard::Keycode::Z => Key::Z,
+        sdl2::keyboard::Keycode::X => Key::X,
+        sdl2::keyboard::Keycode::C => Key::C,
+        sdl2::keyboard::Keycode::V => Key::V,
+        _ => Key::None,
     }
 }

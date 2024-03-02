@@ -2,6 +2,7 @@ pub mod app;
 pub mod emulator;
 
 pub use app::EmulatorApp;
+use retroboy_common::key::Key;
 
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
@@ -14,7 +15,10 @@ const NUM_KEYS: usize = 16;
 
 const START_ADDRESS: u16 = 0x200;
 
+const TICKS_PER_FRAME: usize = 10;
+
 const FONTSET_SIZE: usize = 80;
+
 const FONTSET: [u8; FONTSET_SIZE] = [
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -33,3 +37,25 @@ const FONTSET: [u8; FONTSET_SIZE] = [
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
+
+pub fn key2idx(key: Key) -> Option<usize> {
+    match key {
+        Key::Num1 => Some(0x1),
+        Key::Num2 => Some(0x2),
+        Key::Num3 => Some(0x3),
+        Key::Num4 => Some(0xC),
+        Key::Q => Some(0x4),
+        Key::W => Some(0x5),
+        Key::E => Some(0x6),
+        Key::R => Some(0xD),
+        Key::A => Some(0x7),
+        Key::S => Some(0x8),
+        Key::D => Some(0x9),
+        Key::F => Some(0xE),
+        Key::Z => Some(0xA),
+        Key::X => Some(0x0),
+        Key::C => Some(0xB),
+        Key::V => Some(0xF),
+        _ => None,
+    }
+}

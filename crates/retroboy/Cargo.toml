@@ -10,3 +10,4 @@ retroboy_chip8.workspace = true
 anyhow.workspace = true
 log.workspace = true
 env_logger.workspace = true
+lazy_static.workspace = true
