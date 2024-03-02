@@ -3,6 +3,9 @@ name = "retroboy_chip8"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 retroboy_common.workspace = true
 
@@ -11,3 +14,18 @@ log.workspace = true
 env_logger.workspace = true
 rand = { workspace = true, features = ["getrandom"] }
 getrandom = { workspace = true, features = ["js"] }
+
+js-sys = { workspace = true, optional = true }
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { workspace = true, features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "Element",
+    "HtmlCanvasElement",
+    "ImageData",
+    "KeyboardEvent",
+    "Window"
+], optional = true }
+
+[features]
+wasm = ["wasm-bindgen", "web-sys", "js-sys"]

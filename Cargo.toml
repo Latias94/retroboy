@@ -5,7 +5,6 @@ members = [
     "crates/retroboy_chip8",
     "crates/retroboy_sdl2",
     "crates/retroboy_common",
-    "crates/retroboy_wasm",
 ]
 
 [workspace.dependencies]

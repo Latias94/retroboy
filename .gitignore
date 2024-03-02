@@ -1,5 +1,5 @@
 /target
 .idea
 .vscode
-wasm.js
-wasm_bg.wasm
+retroboy.js
+retroboy_bg.wasm

@@ -1,6 +1,5 @@
+use crate::{Emulator, SCREEN_HEIGHT, SCREEN_WIDTH};
 use js_sys::Uint8Array;
-use retroboy_chip8::Emulator;
-use retroboy_chip8::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, KeyboardEvent};
 

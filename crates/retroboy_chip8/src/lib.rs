@@ -1,5 +1,7 @@
 pub mod app;
 pub mod emulator;
+#[cfg(feature = "wasm")]
+mod wasm;
 
 pub use app::EmulatorApp;
 pub use emulator::Emulator;

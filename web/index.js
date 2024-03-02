@@ -1,4 +1,4 @@
-import init, * as wasm from "./wasm.js"
+import init, * as wasm from "./retroboy.js"
 
 const WIDTH = 64
 const HEIGHT = 32
