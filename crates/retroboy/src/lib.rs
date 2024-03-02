@@ -6,20 +6,18 @@ pub enum EmulatorType {
     Chip8,
 }
 
-pub fn run(emulator: EmulatorType, rom_path: &str) -> Result<()> {
+pub fn run(emulator: EmulatorType, rom_data: &[u8]) -> Result<()> {
     match emulator {
         EmulatorType::Chip8 => {
-            run_chip8(rom_path)?;
+            run_chip8(rom_data)?;
         }
     }
     Ok(())
 }
 
-pub fn run_chip8(rom_path: &str) -> Result<()> {
-    let rom = std::fs::read(rom_path)?;
-
+pub fn run_chip8(rom_data: &[u8]) -> Result<()> {
     let mut app = retroboy_chip8::EmulatorApp::default();
-    app.emulator.load_rom(&rom);
+    app.emulator.load_rom(rom_data);
     let width = app.width();
     let height = app.height();
     let scale = app.scale();
