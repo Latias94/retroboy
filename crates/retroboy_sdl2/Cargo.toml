@@ -9,7 +9,7 @@ readme.workspace = true
 description = "RetroBoy SDL2 frontend"
 
 [dependencies]
-retroboy_common.workspace = true
+retroboy_common.version = "0.1.0"
 
 anyhow.workspace = true
 log.workspace = true

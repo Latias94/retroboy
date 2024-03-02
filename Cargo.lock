@@ -290,7 +290,7 @@ dependencies = [
  "js-sys",
  "log",
  "rand",
- "retroboy_common",
+ "retroboy_common 0.1.0",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -305,13 +305,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "retroboy_common"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bf9a5a137713bbf507fdd623e0e7a35a26bcee92394c35e0309dc098482f56c"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "log",
+]
+
+[[package]]
 name = "retroboy_sdl2"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "env_logger",
  "log",
- "retroboy_common",
+ "retroboy_common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2",
  "typed-builder",
 ]
