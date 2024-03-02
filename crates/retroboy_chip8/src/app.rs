@@ -1,8 +1,8 @@
 use crate::emulator::Emulator;
 use crate::{SCREEN_HEIGHT, SCREEN_SCALE, SCREEN_WIDTH, TICKS_PER_FRAME};
+use retroboy_common::app::App;
 use retroboy_common::color::Color;
 use retroboy_common::key::Key;
-use retroboy_sdl2::App;
 
 #[derive(Default)]
 pub struct EmulatorApp {

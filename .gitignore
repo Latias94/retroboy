@@ -1,3 +1,5 @@
 /target
 .idea
 .vscode
+wasm.js
+wasm_bg.wasm

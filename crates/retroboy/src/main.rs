@@ -1,13 +1,22 @@
-use retroboy_sdl2::{App, SdlContext, SdlInitInfo};
-use std::io;
+use retroboy_sdl2::App;
+use retroboy_sdl2::{SdlContext, SdlInitInfo};
 
 const TITLE: &str = "RetroBoy";
+const DEFAULT_ROM_PATH: &str = "assets/roms/chip8/games/Tetris [Fran Dachille, 1991].ch8";
 
 fn main() {
     env_logger::init();
 
+    let mut rom_path = std::env::args()
+        .nth(1)
+        .unwrap_or(DEFAULT_ROM_PATH.to_string());
+    if rom_path.is_empty() {
+        rom_path = DEFAULT_ROM_PATH.to_string();
+    }
+
+    let rom = std::fs::read(rom_path).unwrap();
+
     let mut app = retroboy_chip8::EmulatorApp::default();
-    let rom = load_rom().unwrap();
     app.emulator.load_rom(&rom);
     let width = app.width();
     let height = app.height();
@@ -19,10 +28,4 @@ fn main() {
         .title(TITLE.to_string())
         .build();
     SdlContext::run(init_info, app).unwrap();
-}
-
-// root/assets/roms/chip8/games/Airplane.ch8
-fn load_rom() -> io::Result<Vec<u8>> {
-    let path = "assets/roms/chip8/games/Pong [Paul Vervalin, 1990].ch8";
-    std::fs::read(path)
 }

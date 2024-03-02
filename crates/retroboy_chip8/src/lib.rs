@@ -2,6 +2,8 @@ pub mod app;
 pub mod emulator;
 
 pub use app::EmulatorApp;
+pub use emulator::Emulator;
+
 use retroboy_common::key::Key;
 
 pub const SCREEN_WIDTH: usize = 64;
