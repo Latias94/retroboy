@@ -276,8 +276,8 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
- "retroboy_chip8",
- "retroboy_sdl2",
+ "retroboy_chip8 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "retroboy_sdl2 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -290,9 +290,23 @@ dependencies = [
  "js-sys",
  "log",
  "rand",
- "retroboy_common 0.1.0",
+ "retroboy_common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "retroboy_chip8"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3537066dc913f0000fbd7f0be807dda1b0f3aee4a083e40de78de720a5d23c82"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "getrandom",
+ "log",
+ "rand",
+ "retroboy_common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -318,6 +332,20 @@ dependencies = [
 [[package]]
 name = "retroboy_sdl2"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "log",
+ "retroboy_common 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sdl2",
+ "typed-builder",
+]
+
+[[package]]
+name = "retroboy_sdl2"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "057293d94a12f6ba125d06f47ef0f8d261228e43459f0896d7b6bea8e778d33d"
 dependencies = [
  "anyhow",
  "env_logger",
