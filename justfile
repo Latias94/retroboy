@@ -1,6 +1,6 @@
 chip8 ROM_PATH="":
   echo 'Run RetroBoy Chip-8 Emulator(SDL2) with ROM: {{ROM_PATH}}'
-  cargo run --release --bin retroboy -- "{{ROM_PATH}}"
+  RUST_LOG="info" cargo run --release --bin retroboy -- "{{ROM_PATH}}"
 
 chip8-web:
   @echo 'Run RetroBoy Chip-8 Emulator(Wasm)'
