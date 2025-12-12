@@ -3,8 +3,10 @@ resolver = "2"
 members = [
     "crates/retroboy",
     "crates/retroboy_chip8",
-    "crates/retroboy_sdl2",
+    "crates/retroboy_space_invaders",
+    "crates/retroboy_sdl3",
     "crates/retroboy_common",
+    "crates/retroboy_gb",
 ]
 
 [workspace.package]
@@ -19,18 +21,21 @@ readme = "README.md"
 [workspace.dependencies]
 retroboy = { path = "crates/retroboy" }
 retroboy_chip8 = { path = "crates/retroboy_chip8" }
-retroboy_sdl2 = { path = "crates/retroboy_sdl2" }
+retroboy_space_invaders = { path = "crates/retroboy_space_invaders" }
+retroboy_sdl3 = { path = "crates/retroboy_sdl3" }
 retroboy_common = { path = "crates/retroboy_common" }
+retroboy_gb = { path = "crates/retroboy_gb" }
 
 anyhow = "1"
 bitflags = "2"
-lazy_static = "1.4"
+lazy_static = "1.5"
 rand = "0.8"
 getrandom = "0.2"
 log = "0.4"
 env_logger = "0.11"
-sdl2 = "0.36"
-typed-builder = "0.18"
+typed-builder = "0.23"
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 web-sys = "0.3"
+sdl3 = "0.16.2"
+rodio = "0.20.1"

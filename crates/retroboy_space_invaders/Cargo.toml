@@ -1,0 +1,16 @@
+[package]
+name = "retroboy_space_invaders"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+readme = "README.md"
+description = "RetroBoy Space Invaders emulator (Intel 8080 arcade)"
+
+[dependencies]
+retroboy_common.workspace = true
+
+anyhow.workspace = true
+log.workspace = true
+rodio.workspace = true

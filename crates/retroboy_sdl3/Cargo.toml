@@ -1,18 +1,18 @@
 [package]
-name = "retroboy_sdl2"
+name = "retroboy_sdl3"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 license.workspace = true
 readme.workspace = true
-description = "RetroBoy SDL2 frontend"
+description = "RetroBoy SDL3 frontend"
 
 [dependencies]
-retroboy_common.version = "0.1.0"
+retroboy_common.workspace = true
 
 anyhow.workspace = true
 log.workspace = true
 env_logger.workspace = true
 typed-builder.workspace = true
-sdl3 = { workspace = true, features = ["default"] }
+sdl3.workspace = true

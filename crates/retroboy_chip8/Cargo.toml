@@ -12,7 +12,7 @@ description = "RetroBoy Chip-8 emulator"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-retroboy_common.version = "0.1.0"
+retroboy_common.workspace = true
 
 anyhow.workspace = true
 log.workspace = true
