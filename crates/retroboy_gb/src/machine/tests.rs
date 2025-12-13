@@ -582,3 +582,74 @@ fn mbc3_ram_enable_and_access_works() {
     gb.bus.write8(0x4000, 0x00);
     assert_eq!(gb.bus.read8(0xA123), 0x34);
 }
+
+/// Basic integration test for MBC5 ROM banking through `GameBoyBus`.
+#[test]
+fn mbc5_basic_rom_banking_works() {
+    // Use 10 banks so that toggling the high ROM bank bit changes the
+    // effective bank even after modulo (256 % 10 != 0).
+    let num_banks = 10;
+    let mut rom = vec![0u8; num_banks * 0x4000];
+
+    let patterns = [0x10u8, 0x21, 0x32, 0x43, 0x54, 0x65, 0x76, 0x87, 0x98, 0xA9];
+    for (bank, &pattern) in patterns.iter().enumerate() {
+        let base = bank * 0x4000;
+        for i in 0..0x4000 {
+            rom[base + i] = pattern;
+        }
+    }
+
+    rom[0x147] = 0x19; // MBC5
+
+    let mut gb = GameBoy::new();
+    gb.load_rom(&rom);
+
+    // Fixed bank 0 region.
+    assert_eq!(gb.bus.read8(0x0000), patterns[0]);
+
+    // Default switchable bank is 1.
+    assert_eq!(gb.bus.read8(0x4000), patterns[1]);
+
+    // Select bank 2 via low bank register.
+    gb.bus.write8(0x2000, 0x02);
+    assert_eq!(gb.bus.read8(0x4000), patterns[2]);
+
+    // Toggle the high bank bit (bit 8). With low=1 and high=1, bank=0x101,
+    // which maps to 257 % 10 = 7 in our test ROM.
+    gb.bus.write8(0x2000, 0x01);
+    gb.bus.write8(0x3000, 0x01);
+    assert_eq!(gb.bus.read8(0x4000), patterns[7]);
+    assert_eq!(gb.bus.read8(0x0000), patterns[0]);
+}
+
+/// Basic MBC5 RAM enable / banking behaviour.
+#[test]
+fn mbc5_ram_enable_and_access_works() {
+    // Minimal 2-bank ROM; RAM size code 0x03 -> 4x8 KiB banks.
+    let mut rom = vec![0u8; 2 * 0x4000];
+    rom[0x147] = 0x1B; // MBC5 + RAM + battery
+    rom[0x149] = 0x03; // 32 KiB RAM
+
+    let mut gb = GameBoy::new();
+    gb.load_rom(&rom);
+
+    // With RAM disabled, reads should return 0xFF and writes have no effect.
+    assert_eq!(gb.bus.read8(0xA000), 0xFF);
+    gb.bus.write8(0xA000, 0x12);
+    assert_eq!(gb.bus.read8(0xA000), 0xFF);
+
+    // Enable RAM and write to bank 0.
+    gb.bus.write8(0x0000, 0x0A);
+    gb.bus.write8(0xA000, 0x12);
+    assert_eq!(gb.bus.read8(0xA000), 0x12);
+
+    // Switch to RAM bank 1 and ensure it's independent.
+    gb.bus.write8(0x4000, 0x01);
+    assert_eq!(gb.bus.read8(0xA000), 0xFF);
+    gb.bus.write8(0xA000, 0x34);
+    assert_eq!(gb.bus.read8(0xA000), 0x34);
+
+    // Switching back should reveal the original bank 0 value.
+    gb.bus.write8(0x4000, 0x00);
+    assert_eq!(gb.bus.read8(0xA000), 0x12);
+}

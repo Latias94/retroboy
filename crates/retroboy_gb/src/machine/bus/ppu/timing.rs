@@ -49,6 +49,14 @@ impl GameBoyBus {
             if (stat & 0x20) != 0 {
                 self.if_reg |= 0x02;
             }
+
+            log::debug!(
+                "GB PPU: VBlank edge (LY {}->{}), IF=0x{:02X}, STAT=0x{:02X}",
+                old_ly,
+                new_ly,
+                self.if_reg,
+                stat,
+            );
         }
 
         // Update STAT (mode, coincidence) and STAT interrupt line based on the
@@ -134,6 +142,13 @@ impl GameBoyBus {
         if !prev_line && line {
             // Rising edge on the STAT interrupt line.
             self.if_reg |= 0x02;
+            log::debug!(
+                "GB PPU: STAT IRQ rising edge (STAT=0x{:02X} LY={} mode={} IF=0x{:02X})",
+                stat,
+                ly,
+                mode,
+                self.if_reg
+            );
         }
     }
 }

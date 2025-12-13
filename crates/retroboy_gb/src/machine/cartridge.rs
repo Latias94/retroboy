@@ -1,13 +1,16 @@
 mod mbc1;
 mod mbc3;
+mod mbc5;
 
 pub(super) use mbc1::Mbc1Cartridge;
 pub(super) use mbc3::Mbc3Cartridge;
+pub(super) use mbc5::Mbc5Cartridge;
 
 /// Simple wrapper enum for supported cartridge mappers.
 pub(super) enum Cartridge {
     Mbc1(Mbc1Cartridge),
     Mbc3(Mbc3Cartridge),
+    Mbc5(Mbc5Cartridge),
 }
 
 impl Cartridge {
@@ -19,10 +22,15 @@ impl Cartridge {
         Self::Mbc3(Mbc3Cartridge::new(rom))
     }
 
+    pub(super) fn new_mbc5(rom: &[u8]) -> Self {
+        Self::Mbc5(Mbc5Cartridge::new(rom))
+    }
+
     pub(super) fn rom_read(&self, addr: u16) -> u8 {
         match self {
             Cartridge::Mbc1(m) => m.rom_read(addr),
             Cartridge::Mbc3(m) => m.rom_read(addr),
+            Cartridge::Mbc5(m) => m.rom_read(addr),
         }
     }
 
@@ -30,6 +38,7 @@ impl Cartridge {
         match self {
             Cartridge::Mbc1(m) => m.rom_write(addr, value),
             Cartridge::Mbc3(m) => m.rom_write(addr, value),
+            Cartridge::Mbc5(m) => m.rom_write(addr, value),
         }
     }
 
@@ -37,6 +46,7 @@ impl Cartridge {
         match self {
             Cartridge::Mbc1(m) => m.ram_read(addr),
             Cartridge::Mbc3(m) => m.ram_read(addr),
+            Cartridge::Mbc5(m) => m.ram_read(addr),
         }
     }
 
@@ -44,6 +54,7 @@ impl Cartridge {
         match self {
             Cartridge::Mbc1(m) => m.ram_write(addr, value),
             Cartridge::Mbc3(m) => m.ram_write(addr, value),
+            Cartridge::Mbc5(m) => m.ram_write(addr, value),
         }
     }
 }

@@ -10,11 +10,18 @@ use retroboy_common::key::Key;
 pub struct GameBoyApp {
     should_exit: bool,
     pub gb: GameBoy,
+    frame_counter: u64,
+    last_pc: u16,
+    pc_stagnant_frames: u32,
+    lcdc_off_frames: u32,
+    last_lcdc: u8,
 }
 
 impl App for GameBoyApp {
     fn init(&mut self) {
         log::info!("Game Boy init");
+        self.last_pc = self.gb.cpu.regs.pc;
+        self.last_lcdc = self.gb.bus.memory[0xFF40];
     }
 
     fn update(&mut self, screen_state: &mut [u8]) {
@@ -25,9 +32,80 @@ impl App for GameBoyApp {
         // For now we render a blank (black) screen. Once the PPU is in place
         // this call will forward to the PPU framebuffer.
         self.gb.video_frame(screen_state);
+
+        self.frame_counter = self.frame_counter.wrapping_add(1);
+
+        let regs = &self.gb.cpu.regs;
+        let pc = regs.pc;
+        if pc == self.last_pc {
+            self.pc_stagnant_frames = self.pc_stagnant_frames.saturating_add(1);
+        } else {
+            self.pc_stagnant_frames = 0;
+            self.last_pc = pc;
+        }
+
+        let lcdc = self.gb.bus.memory[0xFF40];
+        let lcd_enabled = (lcdc & 0x80) != 0;
+        let bg_enabled = (lcdc & 0x01) != 0;
+        if !lcd_enabled || !bg_enabled {
+            self.lcdc_off_frames = self.lcdc_off_frames.saturating_add(1);
+        } else {
+            self.lcdc_off_frames = 0;
+        }
+
+        if lcdc != self.last_lcdc {
+            log::debug!("GB LCDC changed: 0x{:02X} -> 0x{:02X}", self.last_lcdc, lcdc);
+            self.last_lcdc = lcdc;
+        }
+
+        if self.frame_counter == 1 || self.frame_counter % 60 == 0 {
+            let stat = self.gb.bus.memory[0xFF41];
+            let scy = self.gb.bus.memory[0xFF42];
+            let scx = self.gb.bus.memory[0xFF43];
+            let ly = self.gb.bus.memory[0xFF44];
+            log::info!(
+                "GB: frame={} pc=0x{:04X} sp=0x{:04X} af=0x{:04X} bc=0x{:04X} de=0x{:04X} hl=0x{:04X} ime={} halted={} stopped={} locked={} IF=0x{:02X} IE=0x{:02X} LCDC=0x{:02X} STAT=0x{:02X} LY={} SCX={} SCY={}",
+                self.frame_counter,
+                regs.pc,
+                regs.sp,
+                regs.af(),
+                regs.bc(),
+                regs.de(),
+                regs.hl(),
+                self.gb.cpu.ime,
+                self.gb.cpu.halted,
+                self.gb.cpu.is_stopped(),
+                self.gb.cpu.is_locked(),
+                self.gb.bus.if_reg,
+                self.gb.bus.ie_reg,
+                lcdc,
+                stat,
+                ly,
+                scx,
+                scy,
+            );
+        }
+
+        if self.lcdc_off_frames == 120 {
+            log::warn!(
+                "GB: LCD/BG still disabled after ~120 frames (LCDC=0x{:02X}); placeholder renderer will show white",
+                lcdc
+            );
+        }
+
+        if self.pc_stagnant_frames == 600 {
+            log::warn!(
+                "GB: PC unchanged for ~600 frames at 0x{:04X} (halted={} stopped={} locked={})",
+                pc,
+                self.gb.cpu.halted,
+                self.gb.cpu.is_stopped(),
+                self.gb.cpu.is_locked(),
+            );
+        }
     }
 
     fn handle_key_event(&mut self, key: Key, is_pressed: bool) {
+        log::debug!("GB key event: {:?} pressed={}", key, is_pressed);
         // Forward key events to the Game Boy joypad.
         self.gb.handle_key(key, is_pressed);
     }

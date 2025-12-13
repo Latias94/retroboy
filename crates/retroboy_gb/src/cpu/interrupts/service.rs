@@ -51,6 +51,18 @@ impl Cpu {
 
         match selection {
             Some((index, new_if)) => {
+                let vector = 0x0040 + (index as u16) * 8;
+                let ie = bus.read8(0xFFFF);
+                let iflags = bus.read8(0xFF0F) & 0x1F;
+                log::debug!(
+                    "GB CPU interrupt: idx={} vector=0x{:04X} pc=0x{:04X} sp=0x{:04X} IF=0x{:02X} IE=0x{:02X}",
+                    index,
+                    vector,
+                    pc,
+                    self.regs.sp,
+                    iflags,
+                    ie,
+                );
                 bus.write8(0xFF0F, new_if);
                 self.regs.pc = 0x0040 + (index as u16) * 8;
             }

@@ -25,6 +25,25 @@ attempting full commercial games.
 - Bus submodules: `crates/retroboy_gb/src/machine/bus/` (e.g. `mmio.rs`, `ppu.rs`, `timer_io.rs`)
 - Machine submodules: `crates/retroboy_gb/src/machine/` (e.g. `timer.rs`, `cartridge.rs`, `serial.rs`, `video.rs`)
 
+## Running
+
+The workspace ships a small SDL frontend in the `retroboy` binary:
+
+- Run a ROM: `cargo run -p retroboy -- gb path/to/rom.gb`
+- PowerShell example with logging: `$env:RUST_LOG="info"; cargo run -p retroboy -- gb path/to/rom.gb`
+
+Key mapping (current default):
+
+- D-pad: arrow keys
+- A/B: Z/X
+- Select/Start: A/S
+
+Notes:
+
+- Mooneye acceptance ROMs under `assets/mooneye/acceptance/` are mostly non-interactive; many will not show meaningful graphics.
+- The current video output is a simplified VRAM renderer; if `LCDC` or `BG` is disabled, the window will appear white.
+- The repo does not ship commercial game ROMs; use homebrew or your own dumps. Keep any local-only ROMs under `repo-ref/` (not pushed).
+
 ## Testing
 
 - Run the crate tests: `cargo test -p retroboy_gb`

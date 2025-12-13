@@ -68,6 +68,16 @@ impl Default for GameBoyBus {
 impl GameBoyBus {
     pub(super) fn load_rom(&mut self, rom: &[u8]) {
         let cart_type = rom.get(0x147).copied().unwrap_or(0);
+        let rom_size_code = rom.get(0x148).copied().unwrap_or(0);
+        let ram_size_code = rom.get(0x149).copied().unwrap_or(0);
+
+        log::info!(
+            "GB ROM: bytes={} cart_type=0x{:02X} rom_size=0x{:02X} ram_size=0x{:02X}",
+            rom.len(),
+            cart_type,
+            rom_size_code,
+            ram_size_code
+        );
 
         match cart_type {
             0x01 | 0x02 | 0x03 => {
@@ -80,10 +90,19 @@ impl GameBoyBus {
                 self.memory[..len].copy_from_slice(&rom[..len]);
                 self.cartridge = Some(Cartridge::new_mbc3(rom));
             }
+            0x19 | 0x1A | 0x1B | 0x1C | 0x1D | 0x1E => {
+                let len = rom.len().min(0x4000);
+                self.memory[..len].copy_from_slice(&rom[..len]);
+                self.cartridge = Some(Cartridge::new_mbc5(rom));
+            }
             _ => {
                 let len = rom.len().min(MEMORY_SIZE);
                 self.memory[..len].copy_from_slice(&rom[..len]);
                 self.cartridge = None;
+                log::warn!(
+                    "Unsupported cartridge type 0x{:02X}; running as ROM-only (no MBC)",
+                    cart_type
+                );
             }
         }
     }

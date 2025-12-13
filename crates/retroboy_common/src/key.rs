@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
     None,
     Num1,

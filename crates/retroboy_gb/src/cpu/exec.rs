@@ -160,6 +160,19 @@ impl Cpu {
                 // We approximate that by marking the CPU as locked so subsequent
                 // `step` calls return 0 cycles.
                 _ => {
+                    if !self.locked {
+                        let opcode_addr = self.regs.pc.wrapping_sub(1);
+                        log::error!(
+                            "GB CPU locked: invalid opcode 0x{opcode:02X} at PC=0x{pc:04X} (SP=0x{sp:04X} AF=0x{af:04X} BC=0x{bc:04X} DE=0x{de:04X} HL=0x{hl:04X})",
+                            opcode = opcode,
+                            pc = opcode_addr,
+                            sp = self.regs.sp,
+                            af = self.regs.af(),
+                            bc = self.regs.bc(),
+                            de = self.regs.de(),
+                            hl = self.regs.hl(),
+                        );
+                    }
                     self.locked = true;
                     0
                 }

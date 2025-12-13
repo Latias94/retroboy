@@ -37,5 +37,5 @@ typed-builder = "0.23"
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 web-sys = "0.3"
-sdl3 = "0.16.2"
+sdl3 = { version = "0.16.2", features = ["build-from-source"] }
 rodio = "0.20.1"

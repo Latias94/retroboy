@@ -32,6 +32,16 @@ impl Cpu {
     pub fn clear_flags(&mut self) {
         self.regs.f = 0;
     }
+
+    #[inline]
+    pub(crate) fn is_locked(&self) -> bool {
+        self.locked
+    }
+
+    #[inline]
+    pub(crate) fn is_stopped(&self) -> bool {
+        self.stopped
+    }
 }
 
 use crate::cpu_micro::MicroInstrKind;
