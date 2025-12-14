@@ -18,7 +18,13 @@ impl GameBoyBus {
             self.stat_irq_line = false;
         } else if !was_enabled && now_enabled {
             // LCD turned on from a disabled state: restart timing from the top of the frame.
-            self.ppu_cycle_counter = 0;
+            // Allow tweaking the initial PPU phase for cycle-accurate tests.
+            // Defaults to 0 (top of frame) when unset.
+            let start_offset = std::env::var("RETROBOY_GB_PPU_START_OFFSET")
+                .ok()
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(0);
+            self.ppu_cycle_counter = start_offset;
             self.memory[0xFF44] = 0;
             self.stat_irq_line = false;
         }

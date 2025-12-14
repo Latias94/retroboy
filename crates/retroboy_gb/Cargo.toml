@@ -6,7 +6,7 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 readme = "README.md"
-description = "RetroBoy Game Boy (DMG) emulator"
+description = "RetroBoy Game Boy emulator (DMG/CGB)"
 
 [dependencies]
 retroboy_common.workspace = true
@@ -17,3 +17,4 @@ env_logger.workspace = true
 
 [dev-dependencies]
 once_cell = "1.19"
+png = "0.17"

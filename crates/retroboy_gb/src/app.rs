@@ -63,8 +63,12 @@ impl App for GameBoyApp {
             let scy = self.gb.bus.memory[0xFF42];
             let scx = self.gb.bus.memory[0xFF43];
             let ly = self.gb.bus.memory[0xFF44];
+            let bgp = self.gb.bus.memory[0xFF47];
+            let wy = self.gb.bus.memory[0xFF4A];
+            let wx = self.gb.bus.memory[0xFF4B];
+            let window_enabled = (lcdc & 0x20) != 0;
             log::info!(
-                "GB: frame={} pc=0x{:04X} sp=0x{:04X} af=0x{:04X} bc=0x{:04X} de=0x{:04X} hl=0x{:04X} ime={} halted={} stopped={} locked={} IF=0x{:02X} IE=0x{:02X} LCDC=0x{:02X} STAT=0x{:02X} LY={} SCX={} SCY={}",
+                "GB: frame={} pc=0x{:04X} sp=0x{:04X} af=0x{:04X} bc=0x{:04X} de=0x{:04X} hl=0x{:04X} ime={} halted={} stopped={} locked={} IF=0x{:02X} IE=0x{:02X} LCDC=0x{:02X} STAT=0x{:02X} LY={} SCX={} SCY={} BGP=0x{:02X} WX={} WY={} WIN={}",
                 self.frame_counter,
                 regs.pc,
                 regs.sp,
@@ -83,7 +87,38 @@ impl App for GameBoyApp {
                 ly,
                 scx,
                 scy,
+                bgp,
+                wx,
+                wy,
+                window_enabled,
             );
+
+            if log::log_enabled!(log::Level::Debug) {
+                let vram = &self.gb.bus.memory[0x8000..0xA000];
+                let mut vram_sum: u32 = 0;
+                let mut vram_nonzero: u32 = 0;
+                for &b in vram {
+                    vram_sum = vram_sum.wrapping_add(b as u32);
+                    if b != 0 {
+                        vram_nonzero += 1;
+                    }
+                }
+
+                let bg_map_base = if (lcdc & 0x08) != 0 { 0x9C00 } else { 0x9800 };
+                let win_map_base = if (lcdc & 0x40) != 0 { 0x9C00 } else { 0x9800 };
+                let bg00 = self.gb.bus.memory[bg_map_base as usize];
+                let win00 = self.gb.bus.memory[win_map_base as usize];
+
+                log::debug!(
+                    "GB video: vram_nonzero={} vram_sum={} bg_map=0x{:04X} bg00=0x{:02X} win_map=0x{:04X} win00=0x{:02X}",
+                    vram_nonzero,
+                    vram_sum,
+                    bg_map_base,
+                    bg00,
+                    win_map_base,
+                    win00,
+                );
+            }
         }
 
         if self.lcdc_off_frames == 120 {

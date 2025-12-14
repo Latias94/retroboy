@@ -36,14 +36,14 @@ impl Timer {
     /// TIMA write cycle.
     ///
     /// Writes during the overflow/reload window have special behaviour:
-    /// if an overflow is pending (TIMA just overflowed on the previous
-    /// tick), writing to TIMA cancels the reload and interrupt.
+    /// if an overflow is pending (TIMA overflowed on the previous tick),
+    /// the write is ignored and the pending reload still occurs.
     pub(in super::super) fn tima_write(&mut self, value: u8, if_reg: &mut u8) {
-        self.tick_tcycle(if_reg);
         let was_overflow = self.overflow;
-        self.tima = value;
-        if was_overflow {
+        self.tick_tcycle(if_reg);
+        if !was_overflow {
             self.overflow = false;
+            self.tima = value;
         }
     }
 
@@ -60,8 +60,8 @@ impl Timer {
     /// TIMA is read during the window). We approximate this by applying
     /// the write after advancing the timer state for this cycle.
     pub(in super::super) fn tma_write(&mut self, value: u8, if_reg: &mut u8) {
-        self.tick_tcycle(if_reg);
         let was_overflow = self.overflow;
+        self.tick_tcycle(if_reg);
         self.tma = value;
         // If overflow is pending, writing TMA can also update the value
         // that will be reloaded.

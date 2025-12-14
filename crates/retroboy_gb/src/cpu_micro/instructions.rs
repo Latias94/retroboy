@@ -1,6 +1,116 @@
 use crate::cpu::{Bus, Cpu};
 
+fn mcycle_io_offset(env_key: &str, default: u8) -> u32 {
+    std::env::var(env_key)
+        .ok()
+        .and_then(|v| v.parse::<u8>().ok())
+        .unwrap_or(default)
+        .min(3) as u32
+}
+
 impl Cpu {
+    /// Micro-ops for `LD (HL),r` (8 T-cycles when r != (HL)).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: write register value to (HL)
+    pub(super) fn step_ld_hl_from_r_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch already done.
+            }
+            1 => {
+                // M2: write register to (HL).
+                let addr = self.regs.hl();
+                let src = (self.micro_imm16 & 0x00FF) as u8;
+                let value = match src {
+                    0 => self.regs.b,
+                    1 => self.regs.c,
+                    2 => self.regs.d,
+                    3 => self.regs.e,
+                    4 => self.regs.h,
+                    5 => self.regs.l,
+                    7 => self.regs.a,
+                    _ => 0,
+                };
+
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    bus.timer_cycle_write(addr, value);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                // Memory write occurs during M2; allow an offset within the
+                // M-cycle so cycle-sensitive tests can tune the edge.
+                let offset = mcycle_io_offset("RETROBOY_GB_LD_HL_WRITE_OFFSET", 0);
+                bus.tick(offset);
+                bus.write8(addr, value);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
+            }
+            _ => {}
+        }
+        self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
+    /// Micro-ops for `LD r,(HL)` (8 T-cycles when r != (HL)).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: read (HL) into register
+    pub(super) fn step_ld_r_from_hl_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch already done.
+            }
+            1 => {
+                // M2: read (HL) into destination register.
+                let addr = self.regs.hl();
+                let dst = (self.micro_imm16 & 0x00FF) as u8;
+
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    let v = bus.timer_cycle_read(addr);
+                    match dst {
+                        0 => self.regs.b = v,
+                        1 => self.regs.c = v,
+                        2 => self.regs.d = v,
+                        3 => self.regs.e = v,
+                        4 => self.regs.h = v,
+                        5 => self.regs.l = v,
+                        7 => self.regs.a = v,
+                        _ => {}
+                    }
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LD_HL_READ_OFFSET", 3);
+                bus.tick(offset);
+                let v = bus.read8(addr);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                match dst {
+                    0 => self.regs.b = v,
+                    1 => self.regs.c = v,
+                    2 => self.regs.d = v,
+                    3 => self.regs.e = v,
+                    4 => self.regs.h = v,
+                    5 => self.regs.l = v,
+                    7 => self.regs.a = v,
+                    _ => {}
+                }
+                return;
+            }
+            _ => {}
+        }
+        self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
     pub(super) fn step_call_a16_mcycle<B: Bus>(&mut self, bus: &mut B) {
         let timer_used = false;
         match self.micro_stage {
@@ -270,6 +380,100 @@ impl Cpu {
         self.tick_mcycle_with_timer(bus, timer_used);
     }
 
+    /// Micro-ops for `LD (a16),A` (opcode 0xEA, 16 T-cycles).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: fetch low byte of address
+    ///   M3: fetch high byte of address
+    ///   M4: write A to (a16)
+    pub(super) fn step_ld_a_to_a16_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch handled by `step_mcycle`.
+            }
+            1 => {
+                // M2: read low byte of address.
+                let lo = bus.read8(self.regs.pc);
+                self.regs.pc = self.regs.pc.wrapping_add(1);
+                self.micro_imm16 = (self.micro_imm16 & 0xFF00) | (lo as u16);
+            }
+            2 => {
+                // M3: read high byte of address.
+                let hi = bus.read8(self.regs.pc);
+                self.regs.pc = self.regs.pc.wrapping_add(1);
+                self.micro_imm16 = ((hi as u16) << 8) | (self.micro_imm16 & 0x00FF);
+            }
+            3 => {
+                // M4: write A to address.
+                let addr = self.micro_imm16;
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    bus.timer_cycle_write(addr, self.regs.a);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LD_A16_WRITE_OFFSET", 0);
+                bus.tick(offset);
+                bus.write8(addr, self.regs.a);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
+            }
+            _ => {}
+        }
+        self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
+    /// Micro-ops for `LD A,(a16)` (opcode 0xFA, 16 T-cycles).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: fetch low byte of address
+    ///   M3: fetch high byte of address
+    ///   M4: read from (a16) into A
+    pub(super) fn step_ld_a_from_a16_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch handled by `step_mcycle`.
+            }
+            1 => {
+                // M2: read low byte of address.
+                let lo = bus.read8(self.regs.pc);
+                self.regs.pc = self.regs.pc.wrapping_add(1);
+                self.micro_imm16 = (self.micro_imm16 & 0xFF00) | (lo as u16);
+            }
+            2 => {
+                // M3: read high byte of address.
+                let hi = bus.read8(self.regs.pc);
+                self.regs.pc = self.regs.pc.wrapping_add(1);
+                self.micro_imm16 = ((hi as u16) << 8) | (self.micro_imm16 & 0x00FF);
+            }
+            3 => {
+                // M4: read from address.
+                let addr = self.micro_imm16;
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    self.regs.a = bus.timer_cycle_read(addr);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LD_A16_READ_OFFSET", 3);
+                bus.tick(offset);
+                self.regs.a = bus.read8(addr);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
+            }
+            _ => {}
+        }
+        self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
     /// Micro-ops for `LDH A,(a8)` (opcode 0xF0, 12 T-cycles).
     ///
     /// Timing (M-cycles):
@@ -291,16 +495,19 @@ impl Cpu {
             2 => {
                 // M3: read from high memory 0xFF00 + a8.
                 let addr = 0xFF00u16.wrapping_add(self.micro_imm16);
-                let value = if (0xFF04..=0xFF07).contains(&addr) {
-                    // Timer IO: model as a dedicated timer cycle. The Timer
-                    // core is advanced inside `timer_cycle_read`, so we skip
-                    // the generic timer tick for this M-cycle.
+                if (0xFF04..=0xFF07).contains(&addr) {
                     timer_used = true;
-                    bus.timer_cycle_read(addr)
-                } else {
-                    bus.read8(addr)
-                };
-                self.regs.a = value;
+                    self.regs.a = bus.timer_cycle_read(addr);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LDH_A8_READ_OFFSET", 3);
+                bus.tick(offset);
+                self.regs.a = bus.read8(addr);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
             }
             _ => {}
         }
@@ -332,12 +539,90 @@ impl Cpu {
                     // Timer IO cycle; Timer core is advanced internally.
                     timer_used = true;
                     bus.timer_cycle_write(addr, self.regs.a);
-                } else {
-                    bus.write8(addr, self.regs.a);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
                 }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LDH_A8_WRITE_OFFSET", 0);
+                bus.tick(offset);
+                bus.write8(addr, self.regs.a);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
             }
             _ => {}
         }
         self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
+    /// Micro-ops for `LD A,(C)` (opcode 0xF2, 8 T-cycles).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: read from 0xFF00 + C into A
+    pub(super) fn step_ldh_a_from_c_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch already done.
+            }
+            1 => {
+                // M2: read from high memory 0xFF00 + C.
+                let addr = 0xFF00u16.wrapping_add(self.regs.c as u16);
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    self.regs.a = bus.timer_cycle_read(addr);
+                    self.tick_mcycle_with_timer(bus, timer_used);
+                    return;
+                }
+
+                let offset = mcycle_io_offset("RETROBOY_GB_LDH_C_READ_OFFSET", 3);
+                bus.tick(offset);
+                self.regs.a = bus.read8(addr);
+                bus.tick(4 - offset);
+                bus.timer_tick_mcycle();
+                return;
+            }
+            _ => {}
+        }
+        self.tick_mcycle_with_timer(bus, timer_used);
+    }
+
+    /// Micro-ops for `LD (C),A` (opcode 0xE2, 8 T-cycles).
+    ///
+    /// Timing (M-cycles):
+    ///   M1: opcode fetch (handled in `step_mcycle`)
+    ///   M2: write A to 0xFF00 + C
+    pub(super) fn step_ldh_a_to_c_mcycle<B: Bus>(&mut self, bus: &mut B) {
+        let mut timer_used = false;
+        match self.micro_stage {
+            0 => {
+                // M1: opcode fetch already done.
+                self.tick_mcycle_with_timer(bus, false);
+                return;
+            }
+            1 => {
+                // M2: write A to high memory 0xFF00 + C.
+                let offset = std::env::var("RETROBOY_GB_LDH_C_WRITE_OFFSET")
+                    .ok()
+                    .and_then(|v| v.parse::<u8>().ok())
+                    .unwrap_or(0)
+                    .min(3) as u32;
+
+                bus.tick(offset);
+                let addr = 0xFF00u16.wrapping_add(self.regs.c as u16);
+                if (0xFF04..=0xFF07).contains(&addr) {
+                    timer_used = true;
+                    bus.timer_cycle_write(addr, self.regs.a);
+                } else {
+                    bus.write8(addr, self.regs.a);
+                }
+                bus.tick(4 - offset);
+            }
+            _ => return,
+        }
+        if !timer_used {
+            bus.timer_tick_mcycle();
+        }
     }
 }

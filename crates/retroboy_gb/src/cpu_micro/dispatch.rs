@@ -34,8 +34,14 @@ impl Cpu {
             MicroInstrKind::Rst => self.step_rst_mcycle(bus),
             MicroInstrKind::Jr | MicroInstrKind::JrCond => self.step_jr_mcycle(bus),
             MicroInstrKind::CallCond => self.step_call_cond_mcycle(bus),
+            MicroInstrKind::LdHlFromR => self.step_ld_hl_from_r_mcycle(bus),
+            MicroInstrKind::LdRFromHl => self.step_ld_r_from_hl_mcycle(bus),
+            MicroInstrKind::LdAToA16 => self.step_ld_a_to_a16_mcycle(bus),
+            MicroInstrKind::LdAFromA16 => self.step_ld_a_from_a16_mcycle(bus),
             MicroInstrKind::LdhAFromA8 => self.step_ldh_a_from_a8_mcycle(bus),
             MicroInstrKind::LdhAToA8 => self.step_ldh_a_to_a8_mcycle(bus),
+            MicroInstrKind::LdhAFromC => self.step_ldh_a_from_c_mcycle(bus),
+            MicroInstrKind::LdhAToC => self.step_ldh_a_to_c_mcycle(bus),
             MicroInstrKind::None => {
                 // Fallback: no instruction-specific micro-ops; just tick
                 // the bus for one M-cycle.

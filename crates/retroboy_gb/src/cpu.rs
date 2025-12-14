@@ -42,6 +42,11 @@ impl Cpu {
     pub(crate) fn is_stopped(&self) -> bool {
         self.stopped
     }
+
+    #[inline]
+    pub(crate) fn micro_is_idle(&self) -> bool {
+        self.micro_cycles_remaining == 0 && self.micro_prefetched_opcode.is_none()
+    }
 }
 
 use crate::cpu_micro::MicroInstrKind;
@@ -71,6 +76,14 @@ pub struct Cpu {
     /// interrupt handler when running via the micro‑step API
     /// (`step_mcycle`). This is always a multiple of 4 while non‑zero.
     micro_cycles_remaining: u32,
+    /// Opcode that has already been fetched as part of a micro-stepped
+    /// interrupt entry sequence.
+    ///
+    /// Real hardware overlaps the opcode fetch (M1) of the first handler
+    /// instruction with the final M-cycle of interrupt entry. When this
+    /// field is populated, `step_mcycle` will start executing the next
+    /// instruction at M2 instead of performing another opcode fetch cycle.
+    micro_prefetched_opcode: Option<u8>,
     /// Whether the current micro‑stepped sequence was started by taking
     /// an interrupt (as opposed to executing a normal opcode). This is
     /// used to decide when to apply the delayed IME change from EI.

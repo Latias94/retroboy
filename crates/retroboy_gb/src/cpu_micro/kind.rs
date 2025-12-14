@@ -12,8 +12,20 @@ pub enum MicroInstrKind {
     Jr,
     JrCond,
     CallCond,
+    /// LD (HL),r (8 T-cycles when r != (HL)).
+    LdHlFromR,
+    /// LD r,(HL) (8 T-cycles when r != (HL)).
+    LdRFromHl,
+    /// LD (a16),A
+    LdAToA16,
+    /// LD A,(a16)
+    LdAFromA16,
     /// LDH A,(a8)
     LdhAFromA8,
     /// LDH (a8),A
     LdhAToA8,
+    /// LD A,(C)
+    LdhAFromC,
+    /// LD (C),A
+    LdhAToC,
 }

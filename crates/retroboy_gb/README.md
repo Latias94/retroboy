@@ -1,15 +1,14 @@
-# RetroBoy Game Boy (DMG)
+# RetroBoy Game Boy (DMG/CGB)
 
-This crate will host the Game Boy (DMG) emulator for the RetroBoy workspace.
+This crate hosts the Game Boy emulator for the RetroBoy workspace (DMG, with early CGB support).
 
-Current status:
+Current status (high level):
 
-- [x] Crate skeleton and basic module layout
-- [ ] CPU core (LR35902) implementation
-- [ ] Memory/bus and cartridge support
-- [ ] PPU and frame timing
-- [ ] APU and audio output
-- [ ] Debugging tools and test ROM harness
+- CPU: LR35902 core implemented; validated via unit tests, Blargg `cpu_instrs`, and a growing subset of Mooneye acceptance ROMs.
+- Bus/cartridge: ROM-only + basic MBC1/MBC3/MBC5; CGB VBK/SVBK banking; KEY1 speed-switch latch (timing not fully modelled yet); HDMA GDMA/HBlank (simplified).
+- PPU/video: simplified LY/STAT/VBlank timing; line-based DMG/CGB renderer (CGB palettes/attrs/priority); DMG-only dot-mode3 path for mealybug-tearoom-tests.
+- APU: not implemented yet.
+- Tooling/tests: ROM/screenshot harness under `cargo test -p retroboy_gb -- --ignored`; `gb_frame_dump` helper for dumping raw RGB24 frames.
 
 The initial focus is on getting the CPU core correct (using well-known
 test ROMs) and wiring a minimal machine that can run small programs, before
@@ -31,6 +30,7 @@ The workspace ships a small SDL frontend in the `retroboy` binary:
 
 - Run a ROM: `cargo run -p retroboy -- gb path/to/rom.gb`
 - PowerShell example with logging: `$env:RUST_LOG="info"; cargo run -p retroboy -- gb path/to/rom.gb`
+- For "supports CGB" ROMs (header flag `0x80`), opt into CGB mode with: `$env:RETROBOY_GB_PREFER_CGB=1`
 
 Key mapping (current default):
 
@@ -41,8 +41,14 @@ Key mapping (current default):
 Notes:
 
 - Mooneye acceptance ROMs under `assets/mooneye/acceptance/` are mostly non-interactive; many will not show meaningful graphics.
-- The current video output is a simplified VRAM renderer; if `LCDC` or `BG` is disabled, the window will appear white.
+- The current video output is a simplified renderer driven by scanline snapshots; cycle-accurate PPU behaviour is still a work in progress.
 - The repo does not ship commercial game ROMs; use homebrew or your own dumps. Keep any local-only ROMs under `repo-ref/` (not pushed).
+
+## Utilities
+
+- Dump a frame to raw RGB24 (160x144x3 bytes):
+  - `cargo run -p retroboy_gb --bin gb_frame_dump -- path/to/rom.gb out.rgb24 240`
+  - `cargo run -p retroboy_gb --bin gb_frame_dump -- path/to/rom.gb out.rgb24 --until-ldbb`
 
 ## Testing
 

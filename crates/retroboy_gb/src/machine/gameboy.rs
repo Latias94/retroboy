@@ -1,4 +1,5 @@
 use crate::cpu::Cpu;
+use crate::cpu::Bus;
 use retroboy_common::key::Key;
 
 use super::{video, GameBoyBus};
@@ -70,14 +71,55 @@ impl GameBoy {
 
     /// Step the machine for one frame worth of time.
     ///
-    /// This is currently a placeholder that executes a fixed number of CPU
-    /// steps per frame. Once we have the PPU and timers, we will refine this
-    /// to model real Game Boy timing more accurately.
+    /// This advances the CPU until we have consumed roughly one DMG frame's
+    /// worth of time (70224 T-cycles).
     pub fn step_frame(&mut self) {
-        const STEPS_PER_FRAME: u32 = 10_000;
-        for _ in 0..STEPS_PER_FRAME {
-            let _ = self.cpu.step(&mut self.bus);
+        const PPU_CYCLES_PER_FRAME: u32 = 70_224;
+        let mut ppu_cycles = 0u32;
+
+        while ppu_cycles < PPU_CYCLES_PER_FRAME {
+            let taken = self.cpu.step(&mut self.bus);
+            if taken == 0 {
+                // Locked CPU (invalid opcode) or other hard-stop condition.
+                break;
+            }
+            ppu_cycles = ppu_cycles.saturating_add(self.bus.last_ppu_cycles());
         }
+    }
+
+    /// Run until the test ROM's "software breakpoint" instruction `LD B,B`
+    /// (`0x40`) is about to execute, then execute it and stop.
+    ///
+    /// This convention is used by the mealybug-tearoom-tests suite to signal
+    /// that a screenshot can be taken.
+    ///
+    /// This uses the CPU micro-step API so that cycle-sensitive PPU tests
+    /// (such as mealybug-tearoom) can observe IO writes at the correct
+    /// M-cycle.
+    ///
+    /// Returns `true` if the breakpoint was hit before reaching
+    /// `max_mcycles`.
+    pub fn step_until_software_breakpoint(&mut self, max_mcycles: u64) -> bool {
+        for _ in 0..max_mcycles {
+            if self.cpu.micro_is_idle()
+                && !self.cpu.halted
+                && !self.cpu.is_stopped()
+                && !self.bus.cgb_speed_switch_pause_active()
+            {
+                let pc = self.cpu.regs.pc;
+                let opcode = self.bus.read8(pc);
+                if opcode == 0x40 {
+                    self.cpu.step_mcycle(&mut self.bus);
+                    return true;
+                }
+            }
+
+            let taken = self.cpu.step_mcycle(&mut self.bus);
+            if taken == 0 {
+                return false;
+            }
+        }
+        false
     }
 
     /// Update joypad state from a frontend key event.
@@ -116,6 +158,12 @@ impl GameBoy {
     /// framebuffer. We will add a proper PPU module and backing buffer; for
     /// now we generate a very small background-only view directly from VRAM.
     pub fn video_frame<'a>(&'a self, buffer: &'a mut [u8]) {
+        if self.bus.cgb_ppu_framebuffer_copy(buffer) {
+            return;
+        }
+        if self.bus.dmg_ppu_framebuffer_copy(buffer) {
+            return;
+        }
         video::render_video_frame(&self.bus, buffer);
     }
 }

@@ -110,13 +110,19 @@ fn load_mooneye_ppu_rom(filename: &str) -> Vec<u8> {
 fn load_mooneye_interrupts_rom(filename: &str) -> Vec<u8> {
     use std::path::PathBuf;
 
+    let rel_path = if filename.contains('/') || filename.contains('\\') {
+        PathBuf::from(filename)
+    } else {
+        PathBuf::from("interrupts").join(filename)
+    };
+
     let candidates = [
         // In-repo copy mirroring the `acceptance` layout so callers
         // can pass `"interrupts/ie_push.gb"` or `"ei_timing.gb"`.
-        PathBuf::from("assets/mooneye/acceptance").join(filename),
+        PathBuf::from("assets/mooneye/acceptance").join(&rel_path),
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../assets/mooneye/acceptance")
-            .join(filename),
+            .join(&rel_path),
     ];
 
     for path in &candidates {

@@ -23,6 +23,12 @@ impl Cpu {
         // STOP low‑power mode: identical to the `step` implementation, we
         // poll P1 ($FF00) on each call and do not tick the bus so that
         // timers/PPU remain frozen.
+        // CGB KEY1+STOP speed switch pause: the CPU is paused while the LCD
+        // controller continues to advance, and DIV/TIMA remain frozen.
+        if bus.cgb_speed_switch_pause_mcycle() {
+            return 4;
+        }
+
         if self.stopped {
             let p1 = bus.read8(0xFF00);
             if (p1 & 0x0F) != 0x0F {
@@ -45,13 +51,28 @@ impl Cpu {
                 // In HALT, the CPU issues a stream of NOP‑like cycles until
                 // an interrupt is taken. From the bus's perspective this is
                 // just a fixed cost.
-                bus.tick(4);
+                bus.tick_mcycle_generic();
+                bus.timer_tick_mcycle();
                 return 4;
             } else {
                 // Normal instruction path: fetch the opcode and either
                 // hand it off to a dedicated micro-op sequence or fall
                 // back to the monolithic `exec_opcode` semantics.
-                let opcode = self.fetch8(bus);
+                let (opcode, prefetched_m1) = match self.micro_prefetched_opcode.take() {
+                    Some(opcode) => {
+                        // The opcode was already read during the final
+                        // interrupt-entry M-cycle. Mirror `fetch8` by
+                        // advancing PC here so subsequent immediate reads
+                        // start at the correct address.
+                        if self.halt_bug {
+                            self.halt_bug = false;
+                        } else {
+                            self.regs.pc = self.regs.pc.wrapping_add(1);
+                        }
+                        (opcode, true)
+                    },
+                    None => (self.fetch8(bus), false),
+                };
                 match opcode {
                     // 0xCD: CALL a16 (24 T‑cycles).
                     0xCD => {
@@ -182,6 +203,44 @@ impl Cpu {
                         self.micro_cycles_remaining = if cond { 24 } else { 12 };
                         self.micro_from_interrupt = false;
                     }
+                    // LD (HL),r where r != (HL) (8 T-cycles).
+                    0x70..=0x75 | 0x77 => {
+                        let src = opcode & 0x07;
+                        self.micro_instr = MicroInstrKind::LdHlFromR;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = src as u16;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 8;
+                        self.micro_from_interrupt = false;
+                    }
+                    // LD r,(HL) where r != (HL) (8 T-cycles).
+                    0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E => {
+                        let dst = (opcode >> 3) & 0x07;
+                        self.micro_instr = MicroInstrKind::LdRFromHl;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = dst as u16;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 8;
+                        self.micro_from_interrupt = false;
+                    }
+                    // 0xEA: LD (a16),A (16 T-cycles).
+                    0xEA => {
+                        self.micro_instr = MicroInstrKind::LdAToA16;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = 0;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 16;
+                        self.micro_from_interrupt = false;
+                    }
+                    // 0xFA: LD A,(a16) (16 T-cycles).
+                    0xFA => {
+                        self.micro_instr = MicroInstrKind::LdAFromA16;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = 0;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 16;
+                        self.micro_from_interrupt = false;
+                    }
                     // 0xF0: LDH A,(a8) (12 T-cycles).
                     0xF0 => {
                         self.micro_instr = MicroInstrKind::LdhAFromA8;
@@ -191,6 +250,15 @@ impl Cpu {
                         self.micro_cycles_remaining = 12;
                         self.micro_from_interrupt = false;
                     }
+                    // 0xF2: LD A,(C) (8 T-cycles).
+                    0xF2 => {
+                        self.micro_instr = MicroInstrKind::LdhAFromC;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = 0;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 8;
+                        self.micro_from_interrupt = false;
+                    }
                     // 0xE0: LDH (a8),A (12 T-cycles).
                     0xE0 => {
                         self.micro_instr = MicroInstrKind::LdhAToA8;
@@ -198,6 +266,15 @@ impl Cpu {
                         self.micro_imm16 = 0;
                         self.micro_cond_taken = true;
                         self.micro_cycles_remaining = 12;
+                        self.micro_from_interrupt = false;
+                    }
+                    // 0xE2: LD (C),A (8 T-cycles).
+                    0xE2 => {
+                        self.micro_instr = MicroInstrKind::LdhAToC;
+                        self.micro_stage = 0;
+                        self.micro_imm16 = 0;
+                        self.micro_cond_taken = true;
+                        self.micro_cycles_remaining = 8;
                         self.micro_from_interrupt = false;
                     }
                     _ => {
@@ -212,6 +289,17 @@ impl Cpu {
                             self.apply_ime_delay();
                             return 0;
                         }
+                    }
+                }
+
+                // If the opcode fetch (M1) was already performed during the
+                // final M-cycle of interrupt entry, start the instruction at
+                // M2 (skip the stage-0 tick) and reduce the remaining cycle
+                // budget accordingly.
+                if prefetched_m1 && self.micro_cycles_remaining >= 8 {
+                    self.micro_cycles_remaining = self.micro_cycles_remaining.saturating_sub(4);
+                    if self.micro_instr != MicroInstrKind::None {
+                        self.micro_stage = 1;
                     }
                 }
             }

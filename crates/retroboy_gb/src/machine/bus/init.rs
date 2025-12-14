@@ -62,10 +62,14 @@ impl GameBoyBus {
         self.memory[0xFF45] = 0x00; // LYC
         self.memory[0xFF46] = 0xFF; // DMA
         self.memory[0xFF47] = 0xFC; // BGP
-                                    // OBP0/OBP1 are officially "uninitialized"; we leave them at 0.
-                                    // Window position.
+                                     // OBP0/OBP1 are officially "uninitialized"; we leave them at 0.
+                                     // Window position.
         self.memory[0xFF4A] = 0x00; // WY
         self.memory[0xFF4B] = 0x00; // WX
+
+        // Boot ROM disable latch. We start execution at the post-boot entry
+        // point (PC=0x0100), so the boot ROM is considered unmapped.
+        self.memory[0xFF50] = 0x01;
     }
 
     /// Fill internal WRAM and HRAM with pseudo‑random bytes.
@@ -84,19 +88,19 @@ impl GameBoyBus {
             x as u8
         };
 
-        // WRAM: 0xC000–0xDFFF.
+        // WRAM: 0xC000..=0xDFFF.
         for addr in 0xC000..=0xDFFF {
             self.memory[addr] = next_byte();
         }
 
-        // Echo RAM 0xE000–0xFDFF mirrors 0xC000–0xDDFF from the CPU's point
+        // Echo RAM 0xE000..=0xFDFF mirrors 0xC000..=0xDDFF from the CPU's point
         // of view; we do not need to seed it separately because reads go
         // through the mirrored address, but we fill it for completeness.
         for addr in 0xE000..=0xFDFF {
             self.memory[addr] = 0x00;
         }
 
-        // HRAM: 0xFF80–0xFFFE (IE at 0xFFFF is handled separately).
+        // HRAM: 0xFF80..=0xFFFE (IE at 0xFFFF is handled separately).
         for addr in 0xFF80..=0xFFFE {
             self.memory[addr] = next_byte();
         }

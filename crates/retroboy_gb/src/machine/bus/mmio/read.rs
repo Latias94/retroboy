@@ -16,13 +16,16 @@ impl GameBoyBus {
             // VRAM region.
             0x8000..=0x9FFF => {
                 if self.vram_accessible() {
-                    self.memory[addr as usize]
+                    self.vram_read(addr)
                 } else {
                     // Undefined data when VRAM is blocked; most hardware
                     // observations see 0xFF.
                     0xFF
                 }
             }
+
+            // Work RAM.
+            0xC000..=0xDFFF => self.wram_read(addr),
 
             // Cartridge RAM area 0xA000..0xBFFF. When a mapper is present we
             // route accesses through it; otherwise we fall back to internal
@@ -39,10 +42,7 @@ impl GameBoyBus {
             0xFF00 => self.read_joyp(),
 
             // Echo RAM: 0xE000..0xFDFF mirrors 0xC000..0xDDFF.
-            0xE000..=0xFDFF => {
-                let base = addr.wrapping_sub(0x2000);
-                self.memory[base as usize]
-            }
+            0xE000..=0xFDFF => self.wram_echo_read(addr),
 
             // Serial transfer registers.
             0xFF01 => self.serial.sb,
@@ -53,6 +53,136 @@ impl GameBoyBus {
             // Interrupt flags and enable.
             0xFF0F => self.if_reg | 0b1110_0000,
             0xFFFF => self.ie_reg,
+
+            // --- CGB-only registers ---
+            0xFF4C | 0xFF56 => 0xFF,
+            0xFF4D => {
+                if self.is_cgb() {
+                    self.cgb_key1_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF4F => {
+                if self.is_cgb() {
+                    self.cgb_vbk_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF51 => {
+                if self.is_cgb() {
+                    self.cgb_hdma1
+                } else {
+                    0xFF
+                }
+            }
+            0xFF52 => {
+                if self.is_cgb() {
+                    self.cgb_hdma2
+                } else {
+                    0xFF
+                }
+            }
+            0xFF53 => {
+                if self.is_cgb() {
+                    self.cgb_hdma3
+                } else {
+                    0xFF
+                }
+            }
+            0xFF54 => {
+                if self.is_cgb() {
+                    self.cgb_hdma4
+                } else {
+                    0xFF
+                }
+            }
+            0xFF55 => {
+                if self.is_cgb() {
+                    self.cgb_hdma5_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF68 => {
+                if self.is_cgb() {
+                    self.cgb_bgpi_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF69 => {
+                if self.is_cgb() {
+                    self.cgb_bcpd_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF6A => {
+                if self.is_cgb() {
+                    self.cgb_obpi_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF6B => {
+                if self.is_cgb() {
+                    self.cgb_ocpd_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF6C => {
+                if self.is_cgb() {
+                    self.cgb_opri_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF70 => {
+                if self.is_cgb() {
+                    self.cgb_svbk_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF72 => {
+                if self.is_cgb() {
+                    self.cgb_ff72
+                } else {
+                    0xFF
+                }
+            }
+            0xFF73 => {
+                if self.is_cgb() {
+                    self.cgb_ff73
+                } else {
+                    0xFF
+                }
+            }
+            0xFF74 => {
+                if self.is_cgb() {
+                    self.cgb_ff74
+                } else {
+                    0xFF
+                }
+            }
+            0xFF75 => {
+                if self.is_cgb() {
+                    self.cgb_ff75_read()
+                } else {
+                    0xFF
+                }
+            }
+            0xFF76 | 0xFF77 => {
+                if self.is_cgb() {
+                    0x00
+                } else {
+                    0xFF
+                }
+            }
+            // --- End CGB-only registers ---
 
             // OAM region 0xFE00..0xFE9F: CPU access is restricted by PPU mode.
             0xFE00..=0xFE9F => {

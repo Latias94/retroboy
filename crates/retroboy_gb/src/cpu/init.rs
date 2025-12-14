@@ -20,6 +20,7 @@ impl Cpu {
             ime_enable_delay: false,
             locked: false,
             micro_cycles_remaining: 0,
+            micro_prefetched_opcode: None,
             micro_from_interrupt: false,
             interrupt_pc: 0,
             interrupt_vector: 0,
@@ -48,6 +49,7 @@ impl Cpu {
         self.ime_enable_delay = false;
         self.locked = false;
         self.micro_cycles_remaining = 0;
+        self.micro_prefetched_opcode = None;
         self.micro_from_interrupt = false;
         self.micro_instr = MicroInstrKind::None;
         self.micro_stage = 0;

@@ -67,5 +67,33 @@ pub trait Bus {
     fn timer_cycle_write(&mut self, addr: u16, value: u8) {
         self.write8(addr, value)
     }
-}
 
+    /// Handle the CGB "speed switch" mechanism (KEY1 + STOP).
+    ///
+    /// When running in CGB mode and the "prepare speed switch" latch is set,
+    /// executing the `STOP` instruction toggles double-speed and returns
+    /// immediately without entering the STOP low-power state.
+    ///
+    /// Returns `true` if a speed switch occurred.
+    fn cgb_speed_switch(&mut self) -> bool {
+        false
+    }
+
+    /// Returns `true` if the CPU is currently in the post-STOP speed switch pause.
+    ///
+    /// On CGB, after a successful KEY1+STOP speed switch the CPU is paused for
+    /// a fixed duration while the LCD controller continues running.
+    fn cgb_speed_switch_pause_active(&self) -> bool {
+        false
+    }
+
+    /// Consume a single M-cycle (4 T-cycles) of the post-STOP speed switch pause.
+    ///
+    /// Implementations should advance non-timer peripherals (PPU, STAT/VBlank, etc.)
+    /// but must not tick the timer/DIV during this pause.
+    ///
+    /// Returns `true` if a pause M-cycle was consumed and the CPU should remain idle.
+    fn cgb_speed_switch_pause_mcycle(&mut self) -> bool {
+        false
+    }
+}

@@ -1,5 +1,8 @@
 /target
 /repo-ref
+/tmp
+/bgp_trace*.log
+/*.rgb24
 .idea
 .vscode
 retroboy*.js

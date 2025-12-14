@@ -92,6 +92,16 @@ impl Cpu {
             4 => {
                 // Jump to interrupt vector.
                 self.regs.pc = self.interrupt_vector;
+                // Hardware overlaps the opcode fetch (M1) of the first
+                // instruction in the interrupt handler with the final
+                // M-cycle of interrupt entry. Prefetch the opcode here so
+                // `step_mcycle` can start the next instruction at M2.
+                //
+                // Keep `PC` at the vector address so that finishing an
+                // interrupt entry via `step_mcycle` leaves the same visible
+                // CPU state as the instruction-level `step` API; the PC
+                // increment is applied when consuming the prefetched opcode.
+                self.micro_prefetched_opcode = Some(bus.read8(self.regs.pc));
             }
             _ => {}
         }
